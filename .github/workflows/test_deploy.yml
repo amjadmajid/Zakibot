@@ -43,12 +43,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Debug SSH Key Setup
+        run: |
+          echo "Current HOME: $HOME"
+          ls -ld ~/.ssh || echo "No .ssh directory exists"
+
+      - name: Debug SSH Key Setup
+        run: |
+          echo "Current HOME: $HOME"
+          ls -la ~/.ssh || echo "No .ssh directory exists yet."
+          ls -ld $HOME || echo "Home directory not accessible."
+
       - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
+        shell: bash
 
       - name: Deploy to Raspberry Pi
         run: |
