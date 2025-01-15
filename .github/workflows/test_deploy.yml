@@ -57,6 +57,8 @@ jobs:
       - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
+          ls ~/ | grep .ssh
+          ls -l ~/ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
