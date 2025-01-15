@@ -33,3 +33,25 @@ jobs:
     - name: Run tests
       run: |
         python -m unittest discover -s tests
+
+deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to Raspberry Pi
+      run: |
+        ssh pi@${{ secrets.PI_IP }} "
+          cd ~/Zakibot &&
+          git pull origin main &&
+          sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ &&
+          sudo systemctl daemon-reload &&
+          sudo systemctl enable zakibot.service &&
+          sudo systemctl restart zakibot.service
+        "
+      env:
+        PI_IP: ${{ secrets.PI_IP }}
