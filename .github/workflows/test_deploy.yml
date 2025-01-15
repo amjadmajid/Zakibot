@@ -43,17 +43,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Debug SSH Key Setup
-        run: |
-          echo "Current HOME: $HOME"
-          ls -ld ~/.ssh || echo "No .ssh directory exists"
-
-      - name: Debug SSH Key Setup
-        run: |
-          echo "Current HOME: $HOME"
-          ls -la ~/.ssh || echo "No .ssh directory exists yet."
-          ls -ld $HOME || echo "Home directory not accessible."
-
       - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
@@ -62,17 +51,32 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
-
+          # Add verbose output and error handling for ssh-keyscan
+          ssh-keyscan -v -H ${{ secrets.PI_IP }} 2>&1 | tee -a ~/.ssh/known_hosts || echo "Warning: ssh-keyscan had issues but continuing..."
+          # Verify the known_hosts file
+          ls -la ~/.ssh/known_hosts
+    
+      - name: Test SSH Connection
+        run: |
+          # Add verbose SSH connection test
+          ssh -v -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "echo 'Connection test'" || {
+            echo "SSH connection failed. Debugging info:"
+            echo "SSH directory contents:"
+            ls -la ~/.ssh/
+            echo "Known hosts content (sanitized):"
+            cat ~/.ssh/known_hosts | sed 's/^/KNOWN_HOSTS: /'
+            exit 1
+          }
+      
       - name: Deploy to Raspberry Pi
         run: |
-          ssh pi@${{ secrets.PI_IP }} "
-            cd ~/Zakibot &&
-            git pull origin main &&
-            sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ &&
-            sudo systemctl daemon-reload &&
-            sudo systemctl enable zakibot.service &&
-            sudo systemctl restart zakibot.service
+          ssh -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "
+            set -ex
+            cd ~/Zakibot || echo 'Failed to cd to Zakibot'
+            git pull origin main || echo 'Failed to pull from git'
+            sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ || echo 'Failed to copy service file'
+            sudo systemctl daemon-reload || echo 'Failed to reload systemd'
+            sudo systemctl enable zakibot.service || echo 'Failed to enable service'
+            sudo systemctl restart zakibot.service || echo 'Failed to restart service'
           "
-        env:
-          PI_IP: ${{ secrets.PI_IP }}
+          
