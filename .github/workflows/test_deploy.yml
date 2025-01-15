@@ -43,6 +43,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Add SSH key
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keycan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
+
       - name: Deploy to Raspberry Pi
         run: |
           ssh pi@${{ secrets.PI_IP }} "
