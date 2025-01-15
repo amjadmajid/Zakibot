@@ -59,7 +59,7 @@ jobs:
       - name: Test SSH Connection
         run: |
           # Add verbose SSH connection test
-          ssh -v -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "echo 'Connection test'" || {
+          ssh -v -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "echo 'Connection test'" || {
             echo "SSH connection failed. Debugging info:"
             echo "SSH directory contents:"
             ls -la ~/.ssh/
