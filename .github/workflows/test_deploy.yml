@@ -1,4 +1,4 @@
-name: Test and Deploy Workflow
+name: Test Workflow
 
 on:
   push:
@@ -35,37 +35,43 @@ jobs:
         python -m unittest discover -s tests
 
   deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+      needs: test
+      runs-on: ubuntu-latest
+      if: github.ref == 'refs/heads/main'
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Debug Environment
-      run: |
-        echo "Current HOME: $HOME"
-        ls -ld /home/runner
-        ls -ld /home/runner/.ssh || echo "No .ssh directory exists"
+      - name: Debug SSH Key Setup
+        run: |
+          echo "Current HOME: $HOME"
+          ls -ld ~/.ssh || echo "No .ssh directory exists"
 
-    - name: Add SSH key
-      run: |
-        mkdir -p /tmp/ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/ssh/id_rsa
-        chmod 600 /tmp/ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.PI_IP }} >> /tmp/ssh/known_hosts
-      shell: bash
+      - name: Debug SSH Key Setup
+        run: |
+          echo "Current HOME: $HOME"
+          ls -la ~/.ssh || echo "No .ssh directory exists yet."
+          ls -ld $HOME || echo "Home directory not accessible."
 
-    - name: Deploy to Raspberry Pi
-      run: |
-        ssh -i /tmp/ssh/id_rsa -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "
-          cd ~/Zakibot &&
-          git pull origin main &&
-          sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ &&
-          sudo systemctl daemon-reload &&
-          sudo systemctl enable zakibot.service &&
-          sudo systemctl restart zakibot.service
-        "
-      env:
-        PI_IP: ${{ secrets.PI_IP }}
+      - name: Add SSH key
+        run: |
+          sudo chmod 700 /home/runner
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
+        shell: bash
+
+      - name: Deploy to Raspberry Pi
+        run: |
+          ssh pi@${{ secrets.PI_IP }} "
+            cd ~/Zakibot &&
+            git pull origin main &&
+            sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ &&
+            sudo systemctl daemon-reload &&
+            sudo systemctl enable zakibot.service &&
+            sudo systemctl restart zakibot.service
+          "
+        env:
+          PI_IP: ${{ secrets.PI_IP }}
