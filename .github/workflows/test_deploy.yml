@@ -58,8 +58,56 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ls ~/ | grep .ssh
-          ls -l ~/ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          ls -l ~/.ssh
+          echo "-----BEGIN OPENSSH PRIVATE KEY-----
+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
+-----END OPENSSH PRIVATE KEY-----" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.PI_IP }} >> ~/.ssh/known_hosts
         shell: bash
