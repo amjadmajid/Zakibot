@@ -11,7 +11,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
@@ -35,59 +34,88 @@ jobs:
         python -m unittest discover -s tests
 
   deploy:
-      needs: test
-      runs-on: ubuntu-latest
-      if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
-      steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Add SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
-          chmod 700 ~/.ssh
-          chmod 600 ~/.ssh/id_rsa
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-          # Add verbose output and error handling for ssh-keyscan
-          ssh-keyscan -v -H ${{ secrets.PI_IP }} 2>&1 | tee -a ~/.ssh/known_hosts || echo "Warning: ssh-keyscan had issues but continuing..."
-          # Verify the known_hosts file
-          ls -la ~/.ssh/known_hosts
-    
-      - name: Test SSH Connection
-        run: |
-          # Add verbose SSH connection test
-          ssh -v -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "echo 'Connection test'" || {
-            echo "SSH connection failed. Debugging info:"
-            echo "SSH directory contents:"
-            ls -la ~/.ssh/
-            echo "Known hosts content (sanitized):"
-            cat ~/.ssh/known_hosts | sed 's/^/KNOWN_HOSTS: /'
-            exit 1
-          }
-      
-      - name: Deploy to Raspberry Pi
-        run: |
-          # First try to ensure the Pi is reachable
-          timeout 5 ping -c 1 ${{ secrets.PI_IP }} || {
-            echo "Cannot reach Raspberry Pi - please check:"
-            echo "1. Pi is powered on"
-            echo "2. IP address is correct"
-            echo "3. Port 22 is forwarded on your router"
-            exit 1
-          }
-          # Rest of deployment commands...
-      - name: Deploy to Raspberry Pi 2
-        run: |
-          ssh -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "
-            set -ex
-            cd ~/Zakibot || echo 'Failed to cd to Zakibot'
-            git pull origin main || echo 'Failed to pull from git'
-            sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ || echo 'Failed to copy service file'
-            sudo systemctl daemon-reload || echo 'Failed to reload systemd'
-            sudo systemctl enable zakibot.service || echo 'Failed to enable service'
-            sudo systemctl restart zakibot.service || echo 'Failed to restart service'
-          "
-          
+    - name: Network diagnostics
+      run: |
+        echo "Testing network connectivity..."
+        # Install network tools
+        sudo apt-get update && sudo apt-get install -y traceroute net-tools
+        
+        # Basic network info
+        echo "Network interface information:"
+        ifconfig || ip addr
+        
+        # Test basic connectivity
+        echo "Ping test to target:"
+        ping -c 4 ${{ secrets.PI_IP }} || true
+        
+        # Trace route
+        echo "Traceroute to target:"
+        traceroute ${{ secrets.PI_IP }} || true
+        
+        # Port check
+        echo "Testing SSH port:"
+        nc -zv ${{ secrets.PI_IP }} 22 -w 5 || true
+
+    - name: Add SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+        chmod 700 ~/.ssh
+        chmod 600 ~/.ssh/id_rsa
+        eval "$(ssh-agent -s)"
+        ssh-add ~/.ssh/id_rsa
+        
+        # Multiple attempts for ssh-keyscan
+        for i in {1..3}; do
+          echo "Attempt $i to scan SSH host key..."
+          if ssh-keyscan -v -H ${{ secrets.PI_IP }} 2>&1 | tee -a ~/.ssh/known_hosts; then
+            echo "SSH key scan successful"
+            break
+          fi
+          echo "Attempt $i failed, waiting before retry..."
+          sleep 5
+        done
+
+    - name: Test SSH Connection
+      run: |
+        # Multiple connection attempts with debugging
+        for i in {1..3}; do
+          echo "SSH connection attempt $i..."
+          if ssh -v -o ConnectTimeout=10 -o ServerAliveInterval=5 -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "echo 'Connection test'"; then
+            echo "SSH connection successful!"
+            exit 0
+          fi
+          echo "Attempt $i failed, waiting before retry..."
+          sleep 10
+        done
+        
+        # If all attempts fail, show detailed debugging info
+        echo "All connection attempts failed. Debug information:"
+        echo "1. SSH configuration:"
+        cat ~/.ssh/config 2>/dev/null || echo "No SSH config file"
+        echo "2. SSH directory permissions:"
+        ls -la ~/.ssh/
+        echo "3. Network route to target:"
+        ip route get ${{ secrets.PI_IP }} || true
+        exit 1
+
+    - name: Deploy to Raspberry Pi
+      if: success()
+      run: |
+        ssh -o ConnectTimeout=10 -o ServerAliveInterval=5 -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "
+          set -ex
+          cd ~/Zakibot || { echo 'Failed to cd to Zakibot'; exit 1; }
+          git pull origin main || { echo 'Failed to pull from git'; exit 1; }
+          sudo cp ~/Zakibot/zakibot.service /etc/systemd/system/ || { echo 'Failed to copy service file'; exit 1; }
+          sudo systemctl daemon-reload || { echo 'Failed to reload systemd'; exit 1; }
+          sudo systemctl enable zakibot.service || { echo 'Failed to enable service'; exit 1; }
+          sudo systemctl restart zakibot.service || { echo 'Failed to restart service'; exit 1; }
+        "
