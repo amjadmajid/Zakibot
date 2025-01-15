@@ -1,0 +1,7 @@
+RPi.GPIO
+pygame
+picamera2
+flask
+opencv-python-headless
+unittest-mock
+s
