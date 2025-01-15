@@ -68,7 +68,18 @@ jobs:
             exit 1
           }
       
-      - name: Deploy to Raspberry Pi 
+      - name: Deploy to Raspberry Pi
+        run: |
+          # First try to ensure the Pi is reachable
+          timeout 5 ping -c 1 ${{ secrets.PI_IP }} || {
+            echo "Cannot reach Raspberry Pi - please check:"
+            echo "1. Pi is powered on"
+            echo "2. IP address is correct"
+            echo "3. Port 22 is forwarded on your router"
+            exit 1
+          }
+          # Rest of deployment commands...
+      - name: Deploy to Raspberry Pi 2
         run: |
           ssh -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "
             set -ex
