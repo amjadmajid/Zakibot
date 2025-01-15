@@ -3,4 +3,3 @@ pygame
 picamera2
 flask
 opencv-python-headless
-unittest-mock==0.4.6
