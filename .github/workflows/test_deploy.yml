@@ -81,7 +81,7 @@ jobs:
           # Rest of deployment commands...
       - name: Deploy to Raspberry Pi 2
         run: |
-          ssh -o StrictHostKeyChecking=no pi@${{ secrets.PI_IP }} "
+          ssh -o StrictHostKeyChecking=no amjpi@${{ secrets.PI_IP }} "
             set -ex
             cd ~/Zakibot || echo 'Failed to cd to Zakibot'
             git pull origin main || echo 'Failed to pull from git'
