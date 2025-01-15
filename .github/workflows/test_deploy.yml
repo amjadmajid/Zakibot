@@ -56,7 +56,6 @@ jobs:
 
       - name: Add SSH key
         run: |
-          sudo chmod 700 /home/runner
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
