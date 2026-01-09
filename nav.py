@@ -19,7 +19,7 @@ def move():
         # print()
         #print(-jsVal['axis2'])
 
-        motor.move(jsVal['axis1'],-jsVal['axis2'] * .94 ,0.1)
+        motor.move(jsVal['axis1'] ,-jsVal['axis2'] * .95  ,0.1)  
         time.sleep(.05)
 
             

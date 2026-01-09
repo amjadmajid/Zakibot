@@ -29,15 +29,15 @@ class Motor():
 
 
 	def move(self, speed=1, trun=0, t=0):
-		speed *=100
-		trun *=100
+		speed *=70
+		trun *=70
 		leftSpeed = speed - trun
 		rightSpeed = speed + trun
 
-		if leftSpeed>100: leftSpeed=100
-		elif leftSpeed<-100:leftSpeed=-100
-		if rightSpeed>100: rightSpeed=100
-		elif rightSpeed<-100: rightSpeed=-100
+		if leftSpeed>70: leftSpeed=70
+		elif leftSpeed<-70:leftSpeed=-70
+		if rightSpeed>70: rightSpeed=70
+		elif rightSpeed<-70: rightSpeed=-70
 		
 		print(abs(leftSpeed), abs(rightSpeed))
 
